@@ -1,7 +1,7 @@
 import streamlit as st
 import random
 
-# Load word list (ensure this file is uploaded alongside your app)
+# Load the uploaded word list
 with open("filtered_scrabble_words.txt", "r") as f:
     WORD_LIST = set(word.strip().lower() for word in f)
 
@@ -17,28 +17,28 @@ def is_valid_word(word, center_letter, letters):
     return "valid"
 
 def generate_letters():
+    nine_letter_words = [w for w in WORD_LIST if len(w) == 9]
     while True:
-        letters = random.sample("abcdefghijklmnopqrstuvwxyz", 9)
-        center_letter = letters[4]
-        yield letters, center_letter
+        word = random.choice(nine_letter_words)
+        letters = list(set(word))
+        if len(letters) == 9:
+            center_letter = random.choice(letters)
+            return letters, center_letter
 
 def find_valid_words(letters, center_letter):
     return sorted([
         word for word in WORD_LIST
-        if len(word) >= 4
-        and center_letter in word
-        and set(word).issubset(set(letters))
+        if len(word) >= 4 and
+        center_letter in word and
+        set(word).issubset(set(letters))
     ])
 
-# App
-st.title("🧠 Target Word Puzzle")
-
+# Initialize session
 if "game_letters" not in st.session_state:
-    gen = generate_letters()
-    st.session_state.game_letters, st.session_state.center_letter = next(gen)
-    st.session_state.valid_words = find_valid_words(
-        st.session_state.game_letters, st.session_state.center_letter
-    )
+    letters, center = generate_letters()
+    st.session_state.game_letters = letters
+    st.session_state.center_letter = center
+    st.session_state.valid_words = find_valid_words(letters, center)
     st.session_state.found_words = set()
 
 letters = st.session_state.game_letters
@@ -46,7 +46,10 @@ center = st.session_state.center_letter
 valid_words = st.session_state.valid_words
 found_words = st.session_state.found_words
 
-# Display 3x3 grid
+# UI
+st.title("🎯 Target Word Puzzle")
+
+# Display 3x3 letter grid
 st.markdown("### Letters Grid")
 grid_html = "<div style='display: grid; grid-template-columns: repeat(3, 50px); gap: 10px; justify-content: center;'>"
 for i, letter in enumerate(letters):
@@ -58,13 +61,13 @@ for i, letter in enumerate(letters):
 grid_html += "</div>"
 st.markdown(grid_html, unsafe_allow_html=True)
 
-# Game info
+# Info
 st.write(f"**Center Letter:** {center.upper()}")
 st.write(f"**Total possible words:** {len(valid_words)}")
 if len(valid_words) >= 10:
-    st.write(f"⭐ To be Good: {len(valid_words) // 3} words — To be Excellent: {2 * len(valid_words) // 3} words")
+    st.write(f"⭐ To be Good: {len(valid_words) // 3} — To be Excellent: {2 * len(valid_words) // 3}")
 
-# Word input
+# Word entry
 guess = st.text_input("Enter a word:")
 if st.button("Submit"):
     result = is_valid_word(guess.lower(), center, letters)
@@ -83,16 +86,29 @@ if st.button("Submit"):
     elif result == "not_in_list":
         st.error("❌ Not a valid word.")
 
-# Found words display
-st.markdown(f"### You've found {len(found_words)} word{'s' if len(found_words)!=1 else ''}:")
+# Found words
+st.markdown(f"### ✅ You've found {len(found_words)} word{'s' if len(found_words)!=1 else ''}:")
 st.write(", ".join(sorted(found_words)))
 
-# Reset option
+# Reveal all valid words (cheat/debug mode)
+if st.checkbox("🔍 Show all valid words (cheat/debug)", value=False):
+    nine_letter_words = [w.upper() for w in valid_words if len(w) == 9]
+    other_words = sorted([w for w in valid_words if len(w) < 9])
+
+    st.markdown("### 🧠 9-letter word(s):")
+    if nine_letter_words:
+        st.write(", ".join(nine_letter_words))
+    else:
+        st.write("None")
+
+    st.markdown("### 🔤 Other valid words:")
+    st.write(", ".join(other_words))
+
+# Reset
 if st.button("🔄 New Puzzle"):
-    gen = generate_letters()
-    st.session_state.game_letters, st.session_state.center_letter = next(gen)
-    st.session_state.valid_words = find_valid_words(
-        st.session_state.game_letters, st.session_state.center_letter
-    )
+    letters, center = generate_letters()
+    st.session_state.game_letters = letters
+    st.session_state.center_letter = center
+    st.session_state.valid_words = find_valid_words(letters, center)
     st.session_state.found_words = set()
     st.experimental_rerun()
