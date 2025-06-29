@@ -1,6 +1,6 @@
 import streamlit as st import random import itertools import re
 
-✅ Full English word list (cleaned up from available source)
+Full English word list (cleaned up from available source)
 
 @st.cache_data def load_word_list(): with open("https://raw.githubusercontent.com/dwyl/english-words/master/words_alpha.txt") as f: words = set(line.strip().lower() for line in f if len(line.strip()) >= 4 and line.strip().isalpha()) return words
 
